@@ -14,6 +14,7 @@
 #define ESCRITURA 1
 
 #define ERROR -1
+#define OK 0
 
 int
 main(void)
@@ -33,9 +34,9 @@ main(void)
 	printf("  - primer pipe me devuelve: [%i, %i]\n", pfd1[0], pfd1[1]);
 	printf("  - segundo pipe me devuelve: [%i, %i]\n\n", pfd2[0], pfd2[1]);
 
-	pid_t i = fork();
+	pid_t retorno_fork = fork();
 
-	if (i == HIJO) {
+	if (retorno_fork == HIJO) {
 		close(pfd1[ESCRITURA]);
 		close(pfd2[LECTURA]);
 
@@ -47,10 +48,9 @@ main(void)
 			return ERROR;
 		}
 
-		printf("Donde fork me devuelve %i:\n", i);
+		printf("Donde fork me devuelve %i:\n", retorno_fork);
 		printf("  - getpid me devuelve: %i\n", pid);
 		printf("  - getppid me devuelve: %i\n", ppid);
-
 		printf("  - recibo valor %i via fd=%i\n", lectura, pfd1[LECTURA]);
 
 		if (write(pfd2[ESCRITURA], &lectura, sizeof(int)) == ERROR) {
@@ -58,21 +58,24 @@ main(void)
 		}
 
 		printf("  - reenvio valor en fd=%i\n\n", pfd2[ESCRITURA]);
+
+	} else if (retorno_fork == ERROR) {
+		exit(ERROR);
+
 	} else {
 		close(pfd1[LECTURA]);
 		close(pfd2[ESCRITURA]);
 
 		pid_t pid = getpid();
 		pid_t ppid = getppid();
-
 		srandom(3);
 		int rnd = random();
 
-		printf("Donde fork me devuelve %i:\n", i);
+		printf("Donde fork me devuelve %i:\n", retorno_fork);
 		printf("  - getpid me devuelve: %i\n", pid);
 		printf("  - getppid me devuelve: %i\n", ppid);
-
 		printf("  - random me devuelve: %i\n", rnd);
+
 		if (write(pfd1[ESCRITURA], &rnd, sizeof(int)) == ERROR) {
 			return ERROR;
 		}
@@ -92,5 +95,5 @@ main(void)
 		wait(NULL);
 	}
 
-	return 0;
+	return OK;
 }
