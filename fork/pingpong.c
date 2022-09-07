@@ -59,6 +59,9 @@ main(void)
 			return ERROR;
 		}
 
+		close(pfd1[LECTURA]);
+		close(pfd2[ESCRITURA]);
+
 
 	} else if (retorno_fork == ERROR) {
 		exit(ERROR);
@@ -92,6 +95,9 @@ main(void)
 
 		printf("Hola, de nuevo PID <%i>:\n", pid);
 		printf("  - recibí valor <%i> via fd=%i\n", lectura, pfd2[LECTURA]);
+
+		close(pfd1[ESCRITURA]);
+		close(pfd2[LECTURA]);
 
 		wait(NULL);
 	}

@@ -56,7 +56,8 @@ imprimir_primos(int max)
 	} else {
 		close(pipe_derecho[LECTURA]);
 		enviar_secuencia_inicial(max, pipe_derecho);
-		waitpid(retorno_fork, NULL, 0);
+		close(pipe_derecho[ESCRITURA]);
+		wait(NULL);
 	}
 }
 
@@ -70,7 +71,6 @@ enviar_secuencia_inicial(int max, int pipe_derecho[2])
 		}
 		i++;
 	}
-	close(pipe_derecho[ESCRITURA]);
 }
 
 void
@@ -84,7 +84,10 @@ siguiente_primo(int pipe_izquierdo[2])
 	int primo;
 	int lectura = read(pipe_izquierdo[LECTURA], &primo, sizeof(int));
 	if (lectura == 0) {
-		exit(OK);
+		close(pipe_izquierdo[LECTURA]);
+		close(pipe_derecho[LECTURA]);
+		close(pipe_derecho[ESCRITURA]);
+		return;
 	} else if (lectura == ERROR) {
 		exit(ERROR);
 	}
@@ -93,20 +96,18 @@ siguiente_primo(int pipe_izquierdo[2])
 
 	int retorno_fork = fork();
 	if (retorno_fork == HIJO) {
-		close(pipe_derecho[ESCRITURA]);
 		close(pipe_izquierdo[LECTURA]);
+		close(pipe_derecho[ESCRITURA]);
 		siguiente_primo(pipe_derecho);
 	} else if (retorno_fork == ERROR) {
 		exit(ERROR);
 	} else {
 		close(pipe_derecho[LECTURA]);
-
 		transmitir_secuencia(primo, pipe_izquierdo, pipe_derecho);
-
-		close(pipe_izquierdo[LECTURA]);
 		close(pipe_derecho[ESCRITURA]);
+		close(pipe_izquierdo[LECTURA]);
 
-		waitpid(retorno_fork, NULL, 0);
+		wait(NULL);
 		exit(OK);
 	}
 }
