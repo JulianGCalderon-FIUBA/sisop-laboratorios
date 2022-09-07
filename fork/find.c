@@ -85,6 +85,7 @@ find_rec(DIR *dir,
 
 		entry = readdir(dir);
 	}
+	closedir(dir);
 }
 
 bool
