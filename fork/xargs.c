@@ -22,7 +22,7 @@ siguiente_linea()
 	int lectura = getline(&linea, &longitud, stdin);
 	if (lectura == -1) {
 		free(linea);
-		return NULL;
+		return (char *) NULL;
 	}
 	if (linea[lectura - 1] == '\n') {
 		linea[lectura - 1] = '\0';
@@ -45,8 +45,8 @@ main(int argc, char *argv[])
 	char *linea;
 	while ((linea = siguiente_linea())) {
 		char *args[NARGS + 2] = { comando, linea };
-		size_t tope_args = 2;
 
+		size_t tope_args = 2;
 		while (tope_args < NARGS + 1 && (linea = siguiente_linea())) {
 			args[tope_args] = linea;
 			tope_args++;
