@@ -12,7 +12,7 @@
 
 #define HIJO 0
 
-char *siguiente_linea();
+char *siguiente_linea(void);
 
 char *
 siguiente_linea()
