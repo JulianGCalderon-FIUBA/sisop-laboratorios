@@ -12,7 +12,25 @@
 
 #define HIJO 0
 
-int leer_linea_sin_nueva_linea(char **linea, size_t *longitud);
+char *siguiente_linea();
+
+char *
+siguiente_linea()
+{
+	size_t longitud = 0;
+	char *linea = NULL;
+	int lectura = getline(&linea, &longitud, stdin);
+	if (lectura == -1) {
+		free(linea);
+		return NULL;
+	}
+	if (linea[lectura - 1] == '\n') {
+		linea[lectura - 1] = '\0';
+	}
+
+	return linea;
+}
+
 
 int
 main(int argc, char *argv[])
@@ -21,24 +39,17 @@ main(int argc, char *argv[])
 		printf("Argumentos Invalidos\n");
 		exit(-1);
 	}
+
 	char *comando = argv[1];
 
-	char *linea = NULL;
-	size_t longitud = 0;
-	int lectura;
-	while ((lectura = leer_linea_sin_nueva_linea(&linea, &longitud)) > 0) {
+	char *linea;
+	while ((linea = siguiente_linea())) {
 		char *args[NARGS + 2] = { comando, linea };
-		int tope_args = 2;
-		for (; tope_args < NARGS + 1; tope_args++) {
-			char *linea_ = NULL;
-			size_t longitud_ = 0;
-			int lectura_;
-			if ((lectura_ = leer_linea_sin_nueva_linea(
-			             &linea_, &longitud_)) > 0) {
-				args[tope_args] = linea_;
-			} else {
-				break;
-			}
+		size_t tope_args = 2;
+
+		while (tope_args < NARGS + 1 && (linea = siguiente_linea())) {
+			args[tope_args] = linea;
+			tope_args++;
 		}
 		args[tope_args] = NULL;
 
@@ -46,22 +57,15 @@ main(int argc, char *argv[])
 		if (retorno_fork == HIJO) {
 			execvp(comando, args);
 		}
+
+		int i = 1;
+		while (args[i] != NULL) {
+			free(args[i]);
+			i++;
+		}
+
 		wait(NULL);
 	}
 
-	free(linea);
 	return 0;
-}
-
-int
-leer_linea_sin_nueva_linea(char **linea, size_t *longitud)
-{
-	int lectura = getline(linea, longitud, stdin);
-	if (lectura >= 0) {
-		if ((*linea)[lectura - 1] == '\n') {
-			(*linea)[lectura - 1] = '\0';
-		}
-	}
-
-	return lectura;
 }
