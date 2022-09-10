@@ -11,6 +11,7 @@
 #endif
 
 #define HIJO 0
+#define ERROR -1
 
 char *siguiente_linea(void);
 
@@ -56,6 +57,8 @@ main(int argc, char *argv[])
 		int retorno_fork = fork();
 		if (retorno_fork == HIJO) {
 			execvp(comando, args);
+		} else if (retorno_fork == ERROR) {
+			exit(ERROR);
 		}
 
 		int i = 1;
