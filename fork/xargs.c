@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <stdbool.h>
+#include <string.h>
 
 #ifndef NARGS
 #define NARGS 4
@@ -14,6 +16,10 @@
 #define ERROR -1
 
 char *siguiente_linea(void);
+
+void liberar_vector(char *vec[]);
+
+void ejecutar_comando(char *comando, char *argumentos[]);
 
 char *
 siguiente_linea()
@@ -36,13 +42,25 @@ siguiente_linea()
 int
 main(int argc, char *argv[])
 {
-	if (argc != 2) {
-		printf("Argumentos Invalidos\n");
-		exit(-1);
+	int maximos_hijos = 1;
+	char *comando;
+
+	if (argc == 3) {
+		if (strcmp(argv[1], "-P") == 0) {
+			maximos_hijos = 4;
+			comando = argv[2];
+		} else {
+			perror("Argumentos invalidos");
+			exit(ERROR);
+		}
+	} else if (argc == 2) {
+		comando = argv[1];
+	} else {
+		perror("Argumentos invalidos");
+		exit(ERROR);
 	}
 
-	char *comando = argv[1];
-
+	int cantidad_hijos = 0;
 	char *linea;
 	while ((linea = siguiente_linea())) {
 		char *args[NARGS + 2] = { comando, linea };
@@ -54,21 +72,40 @@ main(int argc, char *argv[])
 		}
 		args[tope_args] = NULL;
 
-		int retorno_fork = fork();
-		if (retorno_fork == HIJO) {
-			execvp(comando, args);
-		} else if (retorno_fork == ERROR) {
-			exit(ERROR);
+		if (cantidad_hijos >= maximos_hijos) {
+			wait(NULL);
+			cantidad_hijos--;
 		}
+		cantidad_hijos++;
+		ejecutar_comando(comando, args);
 
-		int i = 1;
-		while (args[i] != NULL) {
-			free(args[i]);
-			i++;
-		}
+		liberar_vector(args + 1);
+	}
 
+	for (int i = 0; i < cantidad_hijos; i++) {
 		wait(NULL);
 	}
 
 	return 0;
+}
+
+void
+ejecutar_comando(char *comando, char *argumentos[])
+{
+	int retorno_fork = fork();
+	if (retorno_fork == HIJO) {
+		execvp(comando, argumentos);
+	} else if (retorno_fork == ERROR) {
+		exit(ERROR);
+	}
+}
+
+void
+liberar_vector(char *vec[])
+{
+	int i = 0;
+	while (vec[i] != NULL) {
+		free(vec[i]);
+		i++;
+	}
 }
