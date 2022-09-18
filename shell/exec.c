@@ -1,5 +1,37 @@
 #include "exec.h"
 
+void execvp_or_exit(char **args);
+void pipe_or_exit(int *fds);
+int fork_or_exit(void);
+
+void
+execvp_or_exit(char **args)
+{
+	if (execvp(args[0], args) != 0) {
+		perror(args[0]);
+		exit(EXIT_FAILURE);
+	};
+}
+
+void
+pipe_or_exit(int *fds)
+{
+	if (pipe(fds) == -1) {
+		perror("error creating pipe");
+		exit(EXIT_FAILURE);
+	}
+}
+
+int
+fork_or_exit()
+{
+	int i = fork();
+	if (i == -1) {
+		exit(EXIT_FAILURE);
+	}
+	return i;
+}
+
 // sets "key" with the key part of "arg"
 // and null-terminates it
 //
@@ -46,9 +78,15 @@ get_environ_value(char *arg, char *value, int idx)
 // 	get the index where the '=' is
 // - 'get_environ_*()' can be useful here
 static void
-set_environ_vars(char **eargv, int eargc)
+set_environ_vars(int eargc, char **eargv)
 {
-	// Your code here
+	for (int i = 0; i < eargc; i++) {
+		char key[ARGSIZE];
+		char value[ARGSIZE];
+		get_environ_key(eargv[i], key);
+		get_environ_value(eargv[i], value, block_contains(eargv[i], '='));
+		setenv(key, value, 1);
+	}
 }
 
 // opens the file in which the stdin/stdout/stderr
@@ -64,9 +102,20 @@ set_environ_vars(char **eargv, int eargc)
 static int
 open_redir_fd(char *file, int flags)
 {
-	// Your code here
+	int modes = 0;
+	flags = flags | O_CLOEXEC;
 
-	return -1;
+	if (flags & O_WRONLY) {
+		flags = flags | O_CREAT | O_TRUNC;
+		modes = S_IRUSR | S_IWUSR;
+	}
+
+	int fd = open(file, flags, modes);
+	if (fd < 0) {
+		exit(-1);
+	}
+
+	return fd;
 }
 
 // executes a command - does not return
@@ -79,51 +128,83 @@ void
 exec_cmd(struct cmd *cmd)
 {
 	// To be used in the different cases
-	struct execcmd *e;
-	struct backcmd *b;
-	struct execcmd *r;
-	struct pipecmd *p;
+	struct execcmd *e = (struct execcmd *) cmd;
+	struct backcmd *b = (struct backcmd *) cmd;
+	struct execcmd *r = (struct execcmd *) cmd;
+	struct pipecmd *p = (struct pipecmd *) cmd;
 
 	switch (cmd->type) {
 	case EXEC:
-		// spawns a command
-		//
-		// Your code here
-		printf("Commands are not yet implemented\n");
-		_exit(-1);
+		set_environ_vars(e->eargc, e->eargv);
+		execvp_or_exit(e->argv);
 		break;
 
 	case BACK: {
-		// runs a command in background
-		//
-		// Your code here
-		printf("Background process are not yet implemented\n");
-		_exit(-1);
+		exec_cmd(b->c);
 		break;
 	}
 
 	case REDIR: {
-		// changes the input/output/stderr flow
-		//
-		// To check if a redirection has to be performed
-		// verify if file name's length (in the execcmd struct)
-		// is greater than zero
-		//
-		// Your code here
-		printf("Redirections are not yet implemented\n");
-		_exit(-1);
+		if (strlen(r->in_file) > 0) {
+			int fd = open_redir_fd(r->in_file, O_RDONLY);
+			dup2(fd, STDIN_FILENO);
+		}
+
+		if (strlen(r->out_file) > 0) {
+			int fd = open_redir_fd(r->out_file, O_WRONLY);
+			dup2(fd, STDOUT_FILENO);
+		}
+
+		if (strlen(r->err_file) > 0) {
+			int fd;
+			if (r->err_file[0] == '&' && r->err_file[1] == '1') {
+				fd = 1;
+			} else {
+				fd = open_redir_fd(r->err_file, O_WRONLY);
+			}
+			dup2(fd, STDERR_FILENO);
+		}
+
+		r->type = EXEC;
+		exec_cmd((struct cmd *) r);
+
 		break;
 	}
 
 	case PIPE: {
-		// pipes two commands
-		//
-		// Your code here
-		printf("Pipes are not yet implemented\n");
+		int fds[2];
+		pipe_or_exit(fds);
+
+		int p1 = fork_or_exit();
+		if (p1 == 0) {
+			dup2(fds[WRITE], STDOUT_FILENO);
+			close(fds[READ]);
+			close(fds[WRITE]);
+
+			exec_cmd(p->leftcmd);
+		}
+
+		int p2 = fork_or_exit();
+		if (p2 == 0) {
+			dup2(fds[READ], STDIN_FILENO);
+			close(fds[READ]);
+			close(fds[WRITE]);
+
+			exec_cmd(p->rightcmd);
+		}
+
+		close(fds[READ]);
+		close(fds[WRITE]);
 
 		// free the memory allocated
 		// for the pipe tree structure
 		free_command(parsed_pipe);
+
+		waitpid(p1, NULL, 0);
+		int status;
+		waitpid(p2, &status, 0);
+
+		exit(status);
 
 		break;
 	}

@@ -11,9 +11,13 @@ run_shell()
 {
 	char *cmd;
 
-	while ((cmd = read_line(prompt)) != NULL)
+	while ((cmd = read_line(prompt)) != NULL) {
+		// oportunistic wait for background processes.
+		waitpid(-1, NULL, WNOHANG);
+
 		if (run_cmd(cmd) == EXIT_SHELL)
 			return;
+	}
 }
 
 // initializes the shell

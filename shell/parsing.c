@@ -101,7 +101,22 @@ parse_environ_var(struct execcmd *c, char *arg)
 static char *
 expand_environ_var(char *arg)
 {
-	// Your code here
+	if (arg[0] == '$') {
+		if (strcmp(arg + 1, "?") == 0) {
+			sprintf(arg, "%i", status);
+
+		} else {
+			char *value = getenv(arg + 1);
+			if (value == NULL) {
+				arg[0] = '\0';
+			} else if (strlen(value) <= strlen(arg)) {
+				strcpy(arg, value);
+			} else {
+				arg = realloc(arg, strlen(value) + 1);
+				strcpy(arg, value);
+			}
+		}
+	}
 
 	return arg;
 }
@@ -133,8 +148,9 @@ parse_exec(char *buf_cmd)
 			continue;
 
 		tok = expand_environ_var(tok);
-
-		c->argv[argc++] = tok;
+		if (*tok) {
+			c->argv[argc++] = tok;
+		}
 	}
 
 	c->argv[argc] = (char *) NULL;
@@ -184,12 +200,15 @@ parse_cmd(char *buf_cmd)
 struct cmd *
 parse_line(char *buf)
 {
+	if (strlen(buf) == 0)
+		return NULL;
+
 	struct cmd *r, *l;
 
 	char *right = split_line(buf, '|');
 
 	l = parse_cmd(buf);
-	r = parse_cmd(right);
+	r = parse_line(right);
 
 	return pipe_cmd_create(l, r);
 }
