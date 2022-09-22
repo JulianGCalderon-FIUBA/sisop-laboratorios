@@ -107,7 +107,7 @@ open_redir_fd(char *file, int flags)
 
 	if (flags & O_WRONLY) {
 		flags = flags | O_CREAT | O_TRUNC;
-		modes = S_IRUSR | S_IWUSR;
+		modes = modes | S_IRUSR | S_IWUSR;
 	}
 
 	int fd = open(file, flags, modes);
