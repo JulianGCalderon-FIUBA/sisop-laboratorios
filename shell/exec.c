@@ -3,6 +3,7 @@
 void execvp_or_exit(char **args);
 void pipe_or_exit(int *fds);
 int fork_or_exit(void);
+bool is_output_reference_redir(char *file);
 
 void
 execvp_or_exit(char **args)
@@ -30,6 +31,16 @@ fork_or_exit()
 		exit(EXIT_FAILURE);
 	}
 	return i;
+}
+
+
+bool
+is_output_reference_redir(char *file)
+{
+	if (strlen(file) != 2) {
+		return false;
+	}
+	return file[0] == '&' && file[1] == '1';
 }
 
 // sets "key" with the key part of "arg"
@@ -88,6 +99,7 @@ set_environ_vars(int eargc, char **eargv)
 		setenv(key, value, 1);
 	}
 }
+
 
 // opens the file in which the stdin/stdout/stderr
 // flow will be redirected, and returns
@@ -157,7 +169,7 @@ exec_cmd(struct cmd *cmd)
 
 		if (strlen(r->err_file) > 0) {
 			int fd;
-			if (r->err_file[0] == '&' && r->err_file[1] == '1') {
+			if (is_output_reference_redir(r->err_file)) {
 				fd = 1;
 			} else {
 				fd = open_redir_fd(r->err_file, O_WRONLY);
@@ -201,10 +213,8 @@ exec_cmd(struct cmd *cmd)
 		free_command(parsed_pipe);
 
 		waitpid(p1, NULL, 0);
-		int status;
-		waitpid(p2, &status, 0);
-
-		exit(status);
+		waitpid(p2, NULL, 0);
+		exit(0);
 
 		break;
 	}
