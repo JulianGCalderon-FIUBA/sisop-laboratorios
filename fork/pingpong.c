@@ -73,7 +73,7 @@ main(void)
 		pid_t pid = getpid();
 		pid_t ppid = getppid();
 		srandom(3);
-		int rnd = random();
+		long int rnd = random();
 
 		printf("Donde fork me devuelve <%i>:\n", retorno_fork);
 		printf("  - getpid me devuelve: <%i>\n", pid);

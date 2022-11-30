@@ -9,8 +9,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#define MAX_PATH 256
-
 #define ERROR -1
 #define OK 0
 
@@ -53,6 +51,7 @@ find(char *match, char *locate_substring(const char *haystack, const char *needl
 {
 	DIR *dir = opendir(".");
 	find_rec(dir, match, ".", locate_substring);
+	closedir(dir);
 }
 
 void
@@ -75,7 +74,7 @@ find_rec(DIR *dir,
 		if (entry->d_type == DT_DIR) {
 			DIR *subdir = get_subdir(dir, entry->d_name);
 
-			char new_prefix[MAX_PATH] = "";
+			char new_prefix[PATH_MAX] = "";
 			strcat(new_prefix, path_to_dir);
 			strcat(new_prefix, "/");
 			strcat(new_prefix, entry->d_name);
@@ -85,7 +84,6 @@ find_rec(DIR *dir,
 
 		entry = readdir(dir);
 	}
-	closedir(dir);
 }
 
 bool
